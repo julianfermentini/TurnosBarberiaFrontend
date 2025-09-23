@@ -1,81 +1,98 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation"; // Para App Router
+// import { useRouter } from 'next/router'; // Para Pages Router
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Icons } from "@/components/ui/icons"
-import { GoogleSignInButton } from "./google-sign-in-button"
-import { authApi, tokenManager } from "@/lib/auth"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Icons } from "@/components/ui/icons";
+import { GoogleSignInButton } from "./google-sign-in-button";
+import { authApi, tokenManager } from "@/lib/auth";
 
 export function AuthForm() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter(); // Agregar esta línea
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
+    lastName: "",
     phone: "",
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
-      let response
+      let response;
       if (isLogin) {
         response = await authApi.login({
           email: formData.email,
           password: formData.password,
-        })
+        });
       } else {
         response = await authApi.register({
           email: formData.email,
           password: formData.password,
           name: formData.name,
+          lastName: formData.lastName,
           phone: formData.phone,
-        })
+        });
       }
 
       // Store tokens
-      tokenManager.setToken(response.token)
-      tokenManager.setRefreshToken(response.refreshToken)
+      tokenManager.setToken(response.token);
+      tokenManager.setRefreshToken(response.refreshToken);
+      console.log("✅ Tokens guardados");
+      console.log("🔄 Intentando navegar a /dashboard...");
 
-      // Redirect to dashboard
-      window.location.href = "/dashboard"
+      // Redirect to dashboard usando router
+      router.replace("/dashboard");
+      console.log('✅ router.push("/dashboard") ejecutado');
     } catch (err: any) {
-      setError(err.message || "An error occurred")
+      console.error("❌ Error en handleSubmit:", err);
+      setError(err.message || "An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSuccess = () => {
     // Google sign-in handled by GoogleSignInButton component
-    console.log("[v0] Google authentication successful")
-  }
+    console.log("[v0] Google authentication successful");
+  };
 
   const handleGoogleError = (error: Error) => {
-    setError(error.message || "Google authentication failed")
-  }
+    setError(error.message || "Google authentication failed");
+  };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <Card className="w-full">
       <CardHeader className="text-center">
         <CardTitle>{isLogin ? "Iniciar Sesión" : "Crear Cuenta"}</CardTitle>
         <CardDescription>
-          {isLogin ? "Ingresa a tu cuenta para reservar citas" : "Crea una cuenta para comenzar a reservar"}
+          {isLogin
+            ? "Ingresa a tu cuenta para reservar citas"
+            : "Crea una cuenta para comenzar a reservar"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -85,14 +102,20 @@ export function AuthForm() {
           </div>
         )}
 
-        <GoogleSignInButton onSuccess={handleGoogleSuccess} onError={handleGoogleError} disabled={isLoading} />
+        <GoogleSignInButton
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={isLoading}
+        />
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <Separator className="w-full" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">O continúa con email</span>
+            <span className="bg-background px-2 text-muted-foreground">
+              O continúa con email
+            </span>
           </div>
         </div>
 
@@ -100,7 +123,7 @@ export function AuthForm() {
           {!isLogin && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo</Label>
+                <Label htmlFor="name">Nombre</Label>
                 <Input
                   id="name"
                   type="text"
@@ -110,6 +133,21 @@ export function AuthForm() {
                   required={!isLogin}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Apellido</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Tu apellido"
+                  value={formData.lastName}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
+                  required={!isLogin}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Teléfono</Label>
                 <Input
@@ -163,11 +201,17 @@ export function AuthForm() {
         </form>
 
         <div className="text-center text-sm">
-          <button type="button" className="text-primary hover:underline" onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
+          <button
+            type="button"
+            className="text-primary hover:underline"
+            onClick={() => setIsLogin(!isLogin)}
+          >
+            {isLogin
+              ? "¿No tienes cuenta? Regístrate"
+              : "¿Ya tienes cuenta? Inicia sesión"}
           </button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
