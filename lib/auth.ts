@@ -97,15 +97,17 @@ export const authApi = {
   },
 }
 
+import Cookies from "js-cookie"
+
 export const tokenManager = {
   getToken: (): string | null => {
     if (typeof window === "undefined") return null
-    return localStorage.getItem("auth_token")
+    return Cookies.get("auth_token") || null
   },
 
   setToken: (token: string): void => {
     if (typeof window === "undefined") return
-    localStorage.setItem("auth_token", token)
+    Cookies.set("auth_token", token, { expires: 7, path: "/" }) // Expires in 7 days
   },
 
   getRefreshToken: (): string | null => {
@@ -120,7 +122,7 @@ export const tokenManager = {
 
   clearTokens: (): void => {
     if (typeof window === "undefined") return
-    localStorage.removeItem("auth_token")
+    Cookies.remove("auth_token", { path: "/" })
     localStorage.removeItem("refresh_token")
   },
 }
